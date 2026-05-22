@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: llm_db
+    environment:
+      POSTGRES_USER: llm_user
+      POSTGRES_PASSWORD: llm_password
+      POSTGRES_DB: llm_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U llm_user -d llm_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: llm_redis
+    ports:
+      - "6379:6379"
+
+  ingestion-service:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile.ingestion
+    container_name: ingestion_service
+    ports:
+      - "8001:8001"
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+
+  chat-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.chat
+    container_name: chat_service
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://llm_user:llm_password@db:5432/llm_db
+      - INGESTION_URL=http://ingestion-service:8001/ingest
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-mock-key}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-sk-mock-key}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-sk-mock-key}
+    depends_on:
+      db:
+        condition: service_healthy
+      ingestion-service:
+        condition: service_started
+
+  worker-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    container_name: worker_service
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://llm_user:llm_password@db:5432/llm_db
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: chatbot_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - chat-service
+
+volumes:
+  pgdata:
