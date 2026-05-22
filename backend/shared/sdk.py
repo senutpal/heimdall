@@ -15,7 +15,7 @@ class LLMObservabilitySDK:
 
     async def _send_log(self, payload: InferenceLogPayload):
         try:
-            await self._http_client.post(self.ingestion_url, json=payload.model_dump())
+            await self._http_client.post(self.ingestion_url, json=payload.model_dump(mode='json'))
         except Exception as e:
             print(f"[SDK Error] Failed to send log: {e}")
 
