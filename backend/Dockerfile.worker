@@ -1,0 +1,16 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Presidio requires spacy model
+RUN python -m spacy download en_core_web_lg
+
+COPY shared /app/shared
+COPY worker_service /app/worker_service
+
+ENV PYTHONPATH=/app
+
+CMD ["python", "-u", "worker_service/main.py"]
