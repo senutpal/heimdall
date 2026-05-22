@@ -50,6 +50,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-mock-key}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-sk-mock-key}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-sk-mock-key}
+      - GROQ_API_KEY=${GROQ_API_KEY:-sk-mock-key}
     depends_on:
       db:
         condition: service_healthy

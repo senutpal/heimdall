@@ -74,7 +74,7 @@ async def chat_stream(request: ChatRequest):
             uuid.UUID(conv_id)
         )
         
-        messages_payload = [{"role": r["role"], "content": r["content"]} for r in reversed(history)]
+        messages_payload = [{"role": "assistant" if r["role"] == "model" else r["role"], "content": r["content"]} for r in reversed(history)]
 
         # Prepare for model message insertion
         model_msg_id = str(uuid.uuid4())

@@ -13,10 +13,15 @@ import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const AVAILABLE_MODELS = [
-  { id: "gemini/gemini-1.5-pro-latest", name: "Gemini 1.5 Pro" },
-  { id: "gemini/gemini-1.5-flash-latest", name: "Gemini 1.5 Flash" },
+  { id: "groq/gpt-oss-120b", name: "Groq GPT OSS 120B" },
+  { id: "groq/gpt-oss-20b", name: "Groq GPT OSS 20B" },
+  { id: "groq/llama-4-scout", name: "Groq Llama 4 Scout" },
+  { id: "groq/llama-3.3-70b-versatile", name: "Groq Llama 3.3 70B" },
+  { id: "groq/qwen-3-32b", name: "Groq Qwen 3 32B" },
+  { id: "groq/llama3-70b-8192", name: "Groq Llama 3 70B" },
+  { id: "gemini/gemini-2.5-pro", name: "Gemini 2.5 Pro" },
+  { id: "gemini/gemini-2.0-flash", name: "Gemini 2.0 Flash" },
   { id: "gpt-4o", name: "GPT-4o" },
-  { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo" },
   { id: "claude-3-5-sonnet-20240620", name: "Claude 3.5 Sonnet" }
 ];
 
@@ -51,7 +56,7 @@ export default function ChatApp() {
   const [activeConv, setActiveConv] = useState<string | null>(null);
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [input, setInput] = useState("");
-  const [model, setModel] = useState("gemini/gemini-1.5-pro-latest");
+  const [model, setModel] = useState("groq/llama-4-scout");
   const [view, setView] = useState<"chat" | "dashboard">("chat");
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<Metrics>({
@@ -158,6 +163,16 @@ export default function ChatApp() {
         })
       });
 
+      if (!res.ok) {
+        let errorMsg = "Server error";
+        try {
+          const errorData = await res.json();
+          errorMsg = errorData.detail || errorData.error || errorMsg;
+        } catch (e) {}
+        setMessages((prev) => [...prev, { role: "model", content: `Error: ${errorMsg}` }]);
+        return;
+      }
+
       if (!res.body) return;
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -175,6 +190,15 @@ export default function ChatApp() {
           if (line.startsWith("data: ") && line !== "data: [DONE]") {
             try {
               const data = JSON.parse(line.substring(6));
+              if (data.error) {
+                modelMessage += `\n\nError: ${data.error}`;
+                setMessages((prev) => {
+                  const newMsgs = [...prev];
+                  newMsgs[newMsgs.length - 1].content = modelMessage;
+                  return newMsgs;
+                });
+                continue;
+              }
               if (data.conversation_id && !activeConv) {
                 setActiveConv(data.conversation_id);
                 fetchConversations();
@@ -194,6 +218,7 @@ export default function ChatApp() {
     } catch (error: any) {
       if (error.name !== "AbortError") {
         console.error("Stream generation error", error);
+        setMessages((prev) => [...prev, { role: "model", content: `Error: ${error.message}` }]);
       }
     } finally {
       setAbortController(null);
@@ -459,7 +484,7 @@ export default function ChatApp() {
                           key={idx} 
                           className={`flex flex-col max-w-[85%] ${msg.role === "user" ? "ml-auto items-end" : "mr-auto items-start"}`}
                         >
-                          <div className={`px-3 py-1.5 rounded-xl shadow-sm text-sm ${msg.role === 'user' ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-card border border-border text-card-foreground rounded-tl-sm'}`}>
+                          <div className={`px-3 py-1 rounded-xl shadow-sm text-sm ${msg.role === 'user' ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 rounded-tl-sm'}`}>
                             <p className="leading-relaxed whitespace-pre-wrap">
                               {msg.content || <span className="animate-pulse opacity-70">Thinking...</span>}
                             </p>
