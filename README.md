@@ -2,6 +2,8 @@
 
 a lightweight, async telemetry wrapper for llm calls that redacts pii and feeds a dashboard in the background.
 
+![Heimdall Dashboard](assets/img/screenshot.jpg)
+
 ## architecture overview
 
 here is how the data flows through the system:
